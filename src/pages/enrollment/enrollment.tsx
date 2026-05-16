@@ -1,9 +1,9 @@
 import { useRecoilValue } from 'recoil';
-import React, { useEffect, useState } from "react";
-import { IconDelete24, IconEdit24 } from "@dhis2/ui";
+import React, { useEffect, useMemo, useState } from "react";
+import { IconDelete24, IconEdit24, Tag } from "@dhis2/ui";
 import { Table, InfoPage, useSchoolCalendarKey } from "dhis2-semis-components";
 import ModalManager from "../../components/modal/saveEnrollment/ModalManager";
-import { TableDataRefetch, Modules, ProgramConfig, D2I18n } from "dhis2-semis-types"
+import { TableDataRefetch, Modules, ProgramConfig, D2I18n, VariablesTypes, CustomAttributeProps } from "dhis2-semis-types"
 import useGetSelectedProgram from '../../hooks/config/useGetSelectedKeys';
 import ModalManagerEnrollmentDelete from '../../components/modal/deleteEnrollment/ModalManager';
 import { useBuildForm, useCheckFilters, useHeader, useTableData, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
@@ -26,6 +26,41 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
     const { formData } = useBuildForm({ dataStoreData, programData: program, module: Modules.Enrollment, schoolCalendar });
     const enrollmentFormFields = formFields({ formFieldsData: formData, sectionName: sectionType! })
     const { getFilters } = useCheckFilters({ filters: (dataStoreData?.filters?.dataElements ?? []) as unknown as any })
+
+    const enrollmentColumns = useMemo(() => {
+        if (!columns) return columns;
+
+        const transferColumn: CustomAttributeProps = {
+            id: "transferCategory",
+            displayName: i18n.t("Transfer"),
+            header: i18n.t("Transfer"),
+            name: i18n.t("Transfer"),
+            labelName: i18n.t("Transfer"),
+            required: false,
+            valueType: "TEXT" as unknown as CustomAttributeProps["valueType"],
+            visible: true,
+            disabled: false,
+            pattern: "",
+            searchable: false,
+            error: false,
+            content: "",
+            key: "transferCategory",
+            type: VariablesTypes.Custom
+        };
+
+        return [...columns, transferColumn];
+    }, [columns, i18n]);
+
+    const displayTableData = useMemo(() => {
+        return tableData.data.map((row: any) => ({
+            ...row,
+            transferCategory: row.transferCategory === 'Transfer IN'
+                ? <Tag positive>{i18n.t('Transfer IN')}</Tag>
+                : row.transferCategory === 'Transfer OUT'
+                    ? <Tag negative>{i18n.t('Transfer OUT')}</Tag>
+                    : row.transferCategory === '_' ? "_" : row.transferCategory
+        }));
+    }, [tableData.data, i18n]);
 
     const handleOpenModal = (e: Record<string, any>, type: "edit" | "delete",) => {
         add("trackedEntity", e?.row?.trackedEntity);
@@ -67,7 +102,11 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
                     academicYear !== null ? `${schoolCalendar?.academicYear}:in:${academicYear}` : null,
                     ...getFilters() as unknown as any
                 ].filter((filter): filter is string => filter !== null),
-                order: dataStoreData.defaults.defaultOrder
+                order: dataStoreData.defaults.defaultOrder,
+                transferConfig: {
+                    transferProgramStage: dataStoreData?.transfer?.programStage,
+                    destinySchoolDataElement: dataStoreData?.transfer?.destinySchool,
+                }
             })
     }, [sectionType, filterState, pagination.page, pagination?.pageSize, refetch, grade, section, school, academicYear])
 
@@ -90,14 +129,14 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
                     :
                     <>
                         <Table
-                            tableData={tableData.data}
+                            tableData={displayTableData}
                             programConfig={program!}
                             pagination={pagination}
                             setPagination={setPagination}
                             paginate={!loading}
                             title={i18n.t("Enrollments")}
                             viewPortWidth={viewPortWidth}
-                            columns={columns}
+                            columns={enrollmentColumns}
                             rowAction={rowsActions}
                             defaultFilterNumber={3}
                             showRowActions

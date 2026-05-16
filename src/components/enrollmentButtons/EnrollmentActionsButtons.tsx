@@ -6,10 +6,11 @@ import ModalManager from '../modal/saveEnrollment/ModalManager';
 import { useBuildForm, useGetSectionTypeLabel, useUrlParams, useShowAlerts, useCheckFilters } from 'dhis2-semis-functions';
 import { D2I18n, Modules, TableDataRefetch } from 'dhis2-semis-types'
 import { IconAddCircle24, Button, ButtonStrip, IconUserGroup16, IconSearch24 } from "@dhis2/ui";
-import { ModalSearchEnrollmentContent, DataExporter, DataImporter, CustomDropdown as DropdownButton, useSchoolCalendarKey } from 'dhis2-semis-components';
+import { ModalSearchEnrollmentContent, ModalSearchAdmissionContent, DataExporter, DataImporter, CustomDropdown as DropdownButton, useSchoolCalendarKey } from 'dhis2-semis-components';
 import { formFields } from '../../utils/constants/form/enrollmentForm';
 import useGetSelectedKeys from '../../hooks/config/useGetSelectedKeys';
 import { useSetRecoilState } from 'recoil';
+import EnrollSingleModal from '../../../../admission/src/components/modal/enrollFromAdmission/EnrollSingleModal';
 
 function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: string }) {
     const { urlParameters } = useUrlParams();
@@ -20,6 +21,15 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
     const [openSaveModal, setOpenSaveModal] = useState<boolean>(false)
     const { school: orgUnit, academicYear } = urlParameters;
     const [openSearchEnrollment, setOpenSearchEnrollment] = useState<boolean>(false);
+    const [openSearchAdmission, setOpenSearchAdmission] = useState<boolean>(false);
+    const [openEnrollSingleModal, setOpenEnrollSingleModal] = useState<boolean>(false);
+    const [enrollStudentData, setEnrollStudentData] = useState<{
+        trackedEntityId: string;
+        enrollmentId?: string;
+        activeEnrollmentToComplete?: string;
+        activeEnrollmentEnrolledAt?: string;
+        initialValues: Record<string, any>;
+    }>({ trackedEntityId: "", enrollmentId: undefined, activeEnrollmentToComplete: undefined, activeEnrollmentEnrolledAt: undefined, initialValues: {} });
     const { formData } = useBuildForm({ dataStoreData, programData, module: Modules.Enrollment, schoolCalendar });
     const { hide, show } = useShowAlerts()
     const { areAllSelected, getFilters } = useCheckFilters({ filters: (dataStoreData.filters.dataElements ?? []) as unknown as any })
@@ -33,6 +43,23 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
     const showAlert = (error: any) => {
         show({ message: `${i18n.t("Unknown error")}: ${error}`, type: { critical: true } })
         setTimeout(hide, 5000);
+    }
+
+    const onSelectTeiForEnrollment = (payload: {
+        trackedEntityId: string;
+        enrollmentId?: string;
+        activeEnrollmentToComplete?: string;
+        activeEnrollmentEnrolledAt?: string;
+        initialValues?: Record<string, any>;
+    }) => {
+        setEnrollStudentData({
+            trackedEntityId: payload.trackedEntityId,
+            enrollmentId: payload.enrollmentId,
+            activeEnrollmentToComplete: payload.activeEnrollmentToComplete,
+            activeEnrollmentEnrolledAt: payload.activeEnrollmentEnrolledAt,
+            initialValues: payload.initialValues ?? {},
+        });
+        setOpenEnrollSingleModal(true);
     }
 
     const enrollmentOptions: any = [
@@ -129,7 +156,7 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                     </span>
                 </Tooltip>}
                 <Tooltip title={orgUnit === null ? i18n.t("Please select an organisation unit before") : ""}
-                    onClick={() => setOpenSaveModal(true)}
+                    onClick={() => setOpenSearchAdmission(true)}
                 >
                     <span>
                         <Button icon={<IconAddCircle24 />}>
@@ -179,6 +206,37 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                     setFormInitialValues={(values: any) => setFormInitialValues(values)}
                 />
             }
+
+            {openSearchAdmission &&
+                <ModalSearchAdmissionContent
+                    open={openSearchAdmission}
+                    programConfig={programData!}
+                    sectionName={sectionName}
+                    setOpen={setOpenSearchAdmission}
+                    Form={Form}
+                    setOpenNewAdmissionModal={() => setOpenSaveModal(true)}
+                    setFormInitialValues={(values: any) => setFormInitialValues(values)}
+                    onSelectTeiForEnrollment={onSelectTeiForEnrollment}
+                />
+            }
+
+            {openEnrollSingleModal && (
+                <EnrollSingleModal
+                    i18n={i18n}
+                    open={openEnrollSingleModal}
+                    setOpen={setOpenEnrollSingleModal}
+                    trackedEntityId={enrollStudentData.trackedEntityId}
+                    enrollmentId={enrollStudentData.enrollmentId}
+                    activeEnrollmentToComplete={enrollStudentData.activeEnrollmentToComplete || undefined}
+                    activeEnrollmentEnrolledAt={enrollStudentData.activeEnrollmentEnrolledAt || undefined}
+                    defaultAcademicYear={(schoolCalendar as any)?.defaults?.academicYear ?? academicYear ?? undefined}
+                    academicYearDataElement={dataStoreData?.registration?.academicYear}
+                    initialValues={enrollStudentData.initialValues}
+                    formFields={formFields({ formFieldsData: formData, sectionName: sectionName! })}
+                    formVariablesFields={formData}
+                    onComplete={() => setOpenEnrollSingleModal(false)}
+                />
+            )}
         </div>
     )
 }

@@ -156,7 +156,7 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                     </span>
                 </Tooltip>}
                 <Tooltip title={orgUnit === null ? i18n.t("Please select an organisation unit before") : ""}
-                    onClick={() => setOpenSearchAdmission(true)}
+                    onClick={() => sectionName === 'student' ? setOpenSearchAdmission(true) : setOpenSaveModal(true)}
                 >
                     <span>
                         <Button icon={<IconAddCircle24 />}>
@@ -207,7 +207,7 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                 />
             }
 
-            {openSearchAdmission &&
+            {openSearchAdmission && sectionName === 'student' &&
                 <ModalSearchAdmissionContent
                     open={openSearchAdmission}
                     programConfig={programData!}

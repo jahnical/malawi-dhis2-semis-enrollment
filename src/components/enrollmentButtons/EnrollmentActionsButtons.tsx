@@ -4,12 +4,11 @@ import { Tooltip } from '@mui/material';
 import styles from './enrollmentActionsButtons.module.css'
 import ModalManager from '../modal/saveEnrollment/ModalManager';
 import { useBuildForm, useGetSectionTypeLabel, useUrlParams, useShowAlerts, useCheckFilters } from 'dhis2-semis-functions';
-import { D2I18n, Modules, TableDataRefetch } from 'dhis2-semis-types'
+import { D2I18n, Modules } from 'dhis2-semis-types'
 import { IconAddCircle24, Button, ButtonStrip, IconUserGroup16, IconSearch24 } from "@dhis2/ui";
-import { ModalSearchEnrollmentContent, ModalSearchAdmissionContent, DataExporter, DataImporter, CustomDropdown as DropdownButton, useSchoolCalendarKey } from 'dhis2-semis-components';
+import { ModalSearchEnrollmentContent, ModalSearchAdmissionContent, DataExporter, CustomDropdown as DropdownButton, useSchoolCalendarKey } from 'dhis2-semis-components';
 import { formFields } from '../../utils/constants/form/enrollmentForm';
 import useGetSelectedKeys from '../../hooks/config/useGetSelectedKeys';
-import { useSetRecoilState } from 'recoil';
 import EnrollSingleModal from '../../../../admission/src/components/modal/enrollFromAdmission/EnrollSingleModal';
 
 function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: string }) {
@@ -37,8 +36,6 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
         academicYear !== null ? `${schoolCalendar?.academicYear}:in:${academicYear}` : null,
         ...getFilters()
     ].filter((filter): filter is string => filter !== null)
-    const setRefetch = useSetRecoilState(TableDataRefetch);
-
 
     const showAlert = (error: any) => {
         show({ message: `${i18n.t("Unknown error")}: ${error}`, type: { critical: true } })
@@ -62,43 +59,10 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
         setOpenEnrollSingleModal(true);
     }
 
+    // Bulk import is intentionally excluded here: enrollment requires a student to
+    // already be admitted first, so bulk-creating/updating enrollments straight from
+    // a spreadsheet would bypass that requirement. This dropdown is export-only.
     const enrollmentOptions: any = [
-        {
-            label: <DataImporter
-                baseURL={baseUrl}
-                label={i18n.t('Enroll new {{section}}', {
-                    section: `${i18n.t(sectionName)}s`,
-                })}
-                module={Modules.Enrollment}
-                onError={(e: any) => { showAlert(e) }}
-                programConfig={programData!}
-                sectionType={sectionName}
-                selectedSectionDataStore={dataStoreData}
-                updating={false}
-                title={i18n.t("Bulk Enrollment")}
-                onClose={() => setRefetch(prev => !prev)}
-            />,
-            divider: true,
-            disabled: false,
-        },
-        {
-            label: <DataImporter
-                baseURL={baseUrl}
-                label={i18n.t('Update existing {{section}}', {
-                    section: `${i18n.t(sectionName)}s`,
-                })}
-                module={Modules.Enrollment}
-                onError={(e: any) => { showAlert(e) }}
-                programConfig={programData!}
-                sectionType={sectionName}
-                selectedSectionDataStore={dataStoreData}
-                updating={true}
-                title={i18n.t("Bulk Enrollment Update")}
-                onClose={() => setRefetch(prev => !prev)}
-            />,
-            divider: true,
-            disabled: false,
-        },
         {
             label: <DataExporter
                 Form={Form}

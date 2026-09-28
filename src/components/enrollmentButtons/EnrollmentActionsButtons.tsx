@@ -3,7 +3,7 @@ import { Form } from "react-final-form";
 import { Tooltip } from '@mui/material';
 import styles from './enrollmentActionsButtons.module.css'
 import ModalManager from '../modal/saveEnrollment/ModalManager';
-import { useBuildForm, useGetSectionTypeLabel, useUrlParams, useShowAlerts, useCheckFilters } from 'dhis2-semis-functions';
+import { useBuildForm, useGetSectionTypeLabel, useSectionProfile, useUrlParams, useShowAlerts, useCheckFilters, getSectionLabels } from 'dhis2-semis-functions';
 import { D2I18n, Modules } from 'dhis2-semis-types'
 import { IconAddCircle24, Button, ButtonStrip, IconUserGroup16, IconSearch24 } from "@dhis2/ui";
 import { ModalSearchEnrollmentContent, ModalSearchAdmissionContent, DataExporter, CustomDropdown as DropdownButton, useSchoolCalendarKey } from 'dhis2-semis-components';
@@ -14,6 +14,8 @@ import EnrollSingleModal from '../../../../admission/src/components/modal/enroll
 function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: string }) {
     const { urlParameters } = useUrlParams();
     const { sectionName } = useGetSectionTypeLabel();
+    const sectionLabels = getSectionLabels(sectionName, i18n);
+    const { enrollFromAdmission } = useSectionProfile();
     const schoolCalendar = useSchoolCalendarKey()
     const { dataStoreData, program: programData } = useGetSelectedKeys()
     const [formInitialValues, setFormInitialValues] = useState({})
@@ -86,7 +88,7 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                 baseURL={baseUrl}
                 eventFilters={filters}
                 label={i18n.t('Export Existing {{section}}', {
-                    section: `${i18n.t(sectionName)}s`,
+                    section: sectionLabels.plural,
                 })}
                 module={Modules.Enrollment}
                 onError={(e: any) => { showAlert(e) }}
@@ -112,7 +114,7 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                             <span className={styles.work_buttons_text}>
                                 {
                                     i18n.t('Search by {{section}}', {
-                                        section: `${i18n.t(sectionName)}s`,
+                                        section: sectionLabels.plural,
                                     })
                                 }
                             </span>
@@ -120,14 +122,14 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                     </span>
                 </Tooltip>}
                 <Tooltip title={orgUnit === null ? i18n.t("Please select an organisation unit before") : ""}
-                    onClick={() => sectionName === 'student' ? setOpenSearchAdmission(true) : setOpenSaveModal(true)}
+                    onClick={() => enrollFromAdmission ? setOpenSearchAdmission(true) : setOpenSaveModal(true)}
                 >
                     <span>
                         <Button icon={<IconAddCircle24 />}>
                             <span className={styles.work_buttons_text}>
                                 {
                                     i18n.t('Enroll {{section}}', {
-                                        section: `${i18n.t(sectionName)}`,
+                                        section: sectionLabels.singular,
                                     })
                                 }
                             </span>
@@ -171,7 +173,7 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                 />
             }
 
-            {openSearchAdmission && sectionName === 'student' &&
+            {openSearchAdmission && enrollFromAdmission &&
                 <ModalSearchAdmissionContent
                     open={openSearchAdmission}
                     programConfig={programData!}

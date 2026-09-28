@@ -5,7 +5,7 @@ import styles from './enrollmentActionsButtons.module.css'
 import ModalManager from '../modal/saveEnrollment/ModalManager';
 import { useBuildForm, useGetSectionTypeLabel, useSectionProfile, useUrlParams, useShowAlerts, useCheckFilters, getSectionLabels } from 'dhis2-semis-functions';
 import { D2I18n, Modules } from 'dhis2-semis-types'
-import { IconAddCircle24, Button, ButtonStrip, IconUserGroup16, IconSearch24 } from "@dhis2/ui";
+import { IconAddCircle24, Button, ButtonStrip, IconUserGroup16, IconSearch24, IconDownload24 } from "@dhis2/ui";
 import { ModalSearchEnrollmentContent, ModalSearchAdmissionContent, DataExporter, CustomDropdown as DropdownButton, useSchoolCalendarKey } from 'dhis2-semis-components';
 import { formFields } from '../../utils/constants/form/enrollmentForm';
 import useGetSelectedKeys from '../../hooks/config/useGetSelectedKeys';
@@ -81,25 +81,6 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
             />,
             divider: false,
             disabled: false,
-        },
-        {
-            label: <DataExporter
-                Form={Form}
-                baseURL={baseUrl}
-                eventFilters={filters}
-                label={i18n.t('Export Existing {{section}}', {
-                    section: sectionLabels.plural,
-                })}
-                module={Modules.Enrollment}
-                onError={(e: any) => { showAlert(e) }}
-                programConfig={programData!}
-                sectionType={sectionName}
-                selectedSectionDataStore={dataStoreData}
-                empty={false}
-                stagesToExport={[dataStoreData.registration.programStage]}
-            />,
-            divider: false,
-            disabled: false,
         }
     ];
 
@@ -144,6 +125,27 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                             disabled={!!(orgUnit == undefined || !areAllSelected() || academicYear == undefined)}
                             icon={<IconUserGroup16 />}
                             options={enrollmentOptions}
+                        />
+                    </span>
+                </Tooltip>
+
+                {/* Only school and academic year are required; the other filters (grade/class,
+                    or staff type/employment type) narrow the export when selected */}
+                <Tooltip title={orgUnit == undefined || academicYear == undefined ? i18n.t("Please select an organisation unit and academic year") : ""}>
+                    <span>
+                        <DataExporter
+                            Form={Form}
+                            baseURL={baseUrl}
+                            eventFilters={filters}
+                            label={i18n.t('Export {{section}}', { section: sectionLabels.plural })}
+                            module={Modules.Enrollment}
+                            onError={(e: any) => { showAlert(e) }}
+                            programConfig={programData!}
+                            sectionType={sectionName}
+                            selectedSectionDataStore={dataStoreData}
+                            empty={false}
+                            stagesToExport={[dataStoreData.registration.programStage]}
+                            button={{ icon: <IconDownload24 />, disabled: orgUnit == undefined || academicYear == undefined }}
                         />
                     </span>
                 </Tooltip>

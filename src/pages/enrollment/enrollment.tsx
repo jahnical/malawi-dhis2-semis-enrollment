@@ -1,16 +1,16 @@
 import { useRecoilValue } from 'recoil';
-import React, { useEffect, useRef, useState } from "react";
-import { IconDelete24, IconEdit24 } from "@dhis2/ui";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { IconDelete24, IconEdit24, Tag } from "@dhis2/ui";
 import { Table, InfoPage, useSchoolCalendarKey } from "dhis2-semis-components";
 import ModalManager from "../../components/modal/saveEnrollment/ModalManager";
-import { TableDataRefetch, Modules, ProgramConfig, D2I18n } from "dhis2-semis-types"
+import { TableDataRefetch, Modules, ProgramConfig, D2I18n, VariablesTypes, CustomAttributeProps } from "dhis2-semis-types"
 import useGetSelectedProgram from '../../hooks/config/useGetSelectedKeys';
 import ModalManagerEnrollmentDelete from '../../components/modal/deleteEnrollment/ModalManager';
-import { useBuildForm, useCheckFilters, useHeader, useTableData, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
+import { getInfoInstructions, useBuildForm, useCheckFilters, useHeader, useTableData, useTableSort, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
 import EnrollmentActionsButtons from "../../components/enrollmentButtons/EnrollmentActionsButtons";
 import { formFields } from '../../utils/constants/form/enrollmentForm';
 
-export default function EnrollmentsPage({ i18n }: { i18n: D2I18n }) {
+export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: string }) {
     const { viewPortWidth } = useViewPortWidth()
     const { urlParameters, add, remove } = useUrlParams()
     const { program, dataStoreData } = useGetSelectedProgram()
@@ -18,10 +18,11 @@ export default function EnrollmentsPage({ i18n }: { i18n: D2I18n }) {
     const { academicYear, school, schoolName, sectionType } = urlParameters
     const [openEditModal, setOpenEditModal] = useState<boolean>(false)
     const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false)
-    const { getData, tableData, loading } = useTableData({ module: Modules.Enrollment });
+    const { getData, tableData, loading, sortableKeys } = useTableData({ module: Modules.Enrollment });
     const [filterState, setFilterState] = useState<{ dataElements: any, attributes: any }>({ attributes: [], dataElements: [] });
     const refetch = useRecoilValue(TableDataRefetch);
     const [pagination, setPagination] = useState<any>({ page: 1, pageSize: 50, totalPages: 0, totalElements: 0 })
+    const { sort, order, orderBy, createSortHandler, withSortableColumns } = useTableSort({ onSortChange: () => setPagination((prev: any) => ({ ...prev, page: 1 })) })
     const { columns } = useHeader({ dataStoreData, programConfigData: program as unknown as ProgramConfig, programStage: "" });
     const { formData } = useBuildForm({ dataStoreData, programData: program, module: Modules.Enrollment, schoolCalendar });
     const enrollmentFormFields = formFields({ formFieldsData: formData, sectionName: sectionType! })
@@ -40,6 +41,41 @@ export default function EnrollmentsPage({ i18n }: { i18n: D2I18n }) {
         order: dataStoreData.defaults.defaultOrder,
     });
     const previousRegistryQuery = useRef(registryQuery);
+
+    const enrollmentColumns = useMemo(() => {
+        if (!columns) return columns;
+
+        const transferColumn: CustomAttributeProps = {
+            id: "transferCategory",
+            displayName: i18n.t("Transfer"),
+            header: i18n.t("Transfer"),
+            name: i18n.t("Transfer"),
+            labelName: i18n.t("Transfer"),
+            required: false,
+            valueType: "TEXT" as unknown as CustomAttributeProps["valueType"],
+            visible: true,
+            disabled: false,
+            pattern: "",
+            searchable: false,
+            error: false,
+            content: "",
+            key: "transferCategory",
+            type: VariablesTypes.Custom
+        };
+
+        return withSortableColumns([...columns, transferColumn], sortableKeys);
+    }, [columns, i18n, sortableKeys]);
+
+    const displayTableData = useMemo(() => {
+        return tableData.data.map((row: any) => ({
+            ...row,
+            transferCategory: row.transferCategory === 'Transfer IN'
+                ? <Tag positive>{i18n.t('Transfer IN')}</Tag>
+                : row.transferCategory === 'Transfer OUT'
+                    ? <Tag negative>{i18n.t('Transfer OUT')}</Tag>
+                    : row.transferCategory === '_' ? "_" : row.transferCategory
+        }));
+    }, [tableData.data, i18n]);
 
     const handleOpenModal = (e: Record<string, any>, type: "edit" | "delete",) => {
         add("trackedEntity", e?.row?.trackedEntity);
@@ -79,8 +115,13 @@ export default function EnrollmentsPage({ i18n }: { i18n: D2I18n }) {
                 ...JSON.parse(registryQuery),
                 page: pagination?.page,
                 pageSize: pagination?.pageSize,
+                sort: sort && { ...sort, program: program! },
+                transferConfig: {
+                    transferProgramStage: dataStoreData?.transfer?.programStage,
+                    destinySchoolDataElement: dataStoreData?.transfer?.destinySchool,
+                }
             })
-    }, [sectionType, registryQuery, pagination.page, pagination?.pageSize, refetch, school, academicYear])
+    }, [sectionType, registryQuery, pagination.page, pagination?.pageSize, refetch, school, academicYear, sort])
 
     return (
         <div style={{ height: "85vh" }}>
@@ -91,31 +132,32 @@ export default function EnrollmentsPage({ i18n }: { i18n: D2I18n }) {
                         sections={[
                             {
                                 sectionTitle: `${i18n.t("Follow the instructions to proceed")}:`,
-                                instructions: [
-                                    `${i18n.t("Select the Organization unit you want to view data")}`,
-                                    `${i18n.t("Use global filters(Class, Grade and Academic Year)")}`
-                                ]
+                                instructions: getInfoInstructions({ i18n, filters: (dataStoreData?.filters?.dataElements ?? []) as any, program: program as any, academicYear: "required", sectionFilters: "optional" })
                             }
                         ]}
                     />
                     :
                     <>
                         <Table
-                            tableData={tableData.data}
+                            tableData={displayTableData}
                             programConfig={program!}
                             pagination={pagination}
                             setPagination={setPagination}
                             paginate={!loading}
                             title={i18n.t("Enrollments")}
                             viewPortWidth={viewPortWidth}
-                            columns={columns}
+                            columns={enrollmentColumns}
                             rowAction={rowsActions}
                             defaultFilterNumber={3}
                             showRowActions
                             filterState={filterState}
                             loading={loading}
-                            rightElements={<EnrollmentActionsButtons i18n={i18n} />}
+                            rightElements={<EnrollmentActionsButtons i18n={i18n} baseUrl={baseUrl} />}
                             setFilterState={setFilterState}
+                            sortable
+                            order={order}
+                            orderBy={orderBy}
+                            createSortHandler={createSortHandler}
                         />
                         {openDeleteModal && <ModalManagerEnrollmentDelete i18n={i18n} open={openDeleteModal} setOpen={setOpenDeleteModal} saveMode="UPDATE" />}
                         {openEditModal && <ModalManager i18n={i18n} formVariablesFields={formData} formFields={enrollmentFormFields} open={openEditModal} setOpen={setOpenEditModal} saveMode="UPDATE" />}

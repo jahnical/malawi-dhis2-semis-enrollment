@@ -86,7 +86,7 @@ function ModalManager(props: ModalManagerInterface) {
             await validateYear({
                 students: [{ trackedEntity: saveMode === 'UPDATE' ? trackedEntity : initialValuesFromSearch?.trackedEntity, values: e }],
                 enrollmentYear: e[dataStoreData.registration.academicYear],
-                dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, sectionType: sectionName,
+                dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, sectionType: sectionName,
             });
         } catch (error: any) {
             show({ message: i18n.t(error.message), type: { critical: true } });
@@ -155,7 +155,7 @@ function ModalManager(props: ModalManagerInterface) {
                 onChange={handleChange}
                 setFormValues={setValues}
                 onCancel={handleCloseModal}
-                formFields={updatedVariables}
+                formFields={validateYear.withFieldError(updatedVariables, dataStoreData.registration.academicYear, values[dataStoreData.registration.academicYear], message => i18n.t(message))}
                 trackedEntity={trackedEntity}
                 initialValues={{
                     ...allInitialValues,

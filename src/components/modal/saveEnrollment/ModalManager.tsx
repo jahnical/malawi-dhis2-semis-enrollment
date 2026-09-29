@@ -107,6 +107,7 @@ function ModalManager(props: ModalManagerInterface) {
 
         saveTei({
             data: data(),
+            program: programData,
             messages: {
                 error: `${i18n.t("Could not conclude the opertation.")}`,
                 sucess: `${i18n.t("Operation concluded successfully")}`,

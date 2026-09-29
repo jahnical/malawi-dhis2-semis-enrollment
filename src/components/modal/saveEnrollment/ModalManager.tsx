@@ -8,7 +8,7 @@ import useGetSelectedKeys from "../../../hooks/config/useGetSelectedKeys";
 import { ModalComponent, useGetUsedProgramStages, } from "dhis2-semis-components";
 import { enrollmentPostBody, enrollmentUpdateBody } from "../../../utils/enrollment";
 import useGetEnrollmentUpdateInitialValues from "../../../hooks/form/useGetEnrollmentUpdateInitialValues";
-import { useGetAttributes, useGetPatternCode, useSaveTei, useUrlParams, useGetSectionTypeLabel, RulesEngine, capitalizeString } from "dhis2-semis-functions";
+import { useGetAttributes, useGetPatternCode, useSaveTei, useUrlParams, useGetSectionTypeLabel, RulesEngine, capitalizeString, getSectionLabels } from "dhis2-semis-functions";
 
 
 function ModalManager(props: ModalManagerInterface) {
@@ -24,6 +24,7 @@ function ModalManager(props: ModalManagerInterface) {
     const programStagesToSave = useGetUsedProgramStages({ sectionType: sectionName });
     const { errorLoading, returnPattern, loadingCodes, generatedVariables } = useGetPatternCode();
     const { open, setOpen, saveMode, initialValues: initialValuesFromSearch, formFields = [], formVariablesFields, setFormInitialValues, i18n } = props;
+    const sectionLabels = getSectionLabels(sectionName, i18n);
     const { getInitialValues, initialValues: updateInitialValues, loading: initialValuesLoading, enrollmentEvents } = useGetEnrollmentUpdateInitialValues()
 
     let allInitialValues = {
@@ -106,6 +107,7 @@ function ModalManager(props: ModalManagerInterface) {
 
         saveTei({
             data: data(),
+            program: programData,
             messages: {
                 error: `${i18n.t("Could not conclude the opertation.")}`,
                 sucess: `${i18n.t("Operation concluded successfully")}`,
@@ -125,7 +127,7 @@ function ModalManager(props: ModalManagerInterface) {
             handleClose={handleCloseModal}
             loading={loadingCodes || initialValuesLoading}
             title={i18n.t('Single {{section}} Enrollment {{mode}}', {
-                section: i18n.t(sectionName),
+                section: sectionLabels.title,
                 mode: saveMode === 'UPDATE' ? i18n.t('Update') : ''
             })}
         >

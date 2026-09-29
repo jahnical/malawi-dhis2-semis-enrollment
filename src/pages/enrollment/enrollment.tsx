@@ -6,7 +6,7 @@ import ModalManager from "../../components/modal/saveEnrollment/ModalManager";
 import { TableDataRefetch, Modules, ProgramConfig, D2I18n, VariablesTypes, CustomAttributeProps } from "dhis2-semis-types"
 import useGetSelectedProgram from '../../hooks/config/useGetSelectedKeys';
 import ModalManagerEnrollmentDelete from '../../components/modal/deleteEnrollment/ModalManager';
-import { useBuildForm, useCheckFilters, useHeader, useTableData, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
+import { useBuildForm, useCheckFilters, useHeader, useTableData, useTableSort, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
 import EnrollmentActionsButtons from "../../components/enrollmentButtons/EnrollmentActionsButtons";
 import { formFields } from '../../utils/constants/form/enrollmentForm';
 
@@ -18,10 +18,11 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
     const { academicYear, grade, class: section, school, schoolName, sectionType } = urlParameters
     const [openEditModal, setOpenEditModal] = useState<boolean>(false)
     const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false)
-    const { getData, tableData, loading } = useTableData({ module: Modules.Enrollment });
+    const { getData, tableData, loading, sortableKeys } = useTableData({ module: Modules.Enrollment });
     const [filterState, setFilterState] = useState<{ dataElements: any, attributes: any }>({ attributes: [], dataElements: [] });
     const refetch = useRecoilValue(TableDataRefetch);
     const [pagination, setPagination] = useState<any>({ page: 1, pageSize: 50, totalPages: 0, totalElements: 0 })
+    const { sort, order, orderBy, createSortHandler, withSortableColumns } = useTableSort({ onSortChange: () => setPagination((prev: any) => ({ ...prev, page: 1 })) })
     const { columns } = useHeader({ dataStoreData, programConfigData: program as unknown as ProgramConfig, programStage: "" });
     const { formData } = useBuildForm({ dataStoreData, programData: program, module: Modules.Enrollment, schoolCalendar });
     const enrollmentFormFields = formFields({ formFieldsData: formData, sectionName: sectionType! })
@@ -48,8 +49,8 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
             type: VariablesTypes.Custom
         };
 
-        return [...columns, transferColumn];
-    }, [columns, i18n]);
+        return withSortableColumns([...columns, transferColumn], sortableKeys);
+    }, [columns, i18n, sortableKeys]);
 
     const displayTableData = useMemo(() => {
         return tableData.data.map((row: any) => ({
@@ -103,12 +104,13 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
                     ...getFilters() as unknown as any
                 ].filter((filter): filter is string => filter !== null),
                 order: dataStoreData.defaults.defaultOrder,
+                sort: sort && { ...sort, program: program! },
                 transferConfig: {
                     transferProgramStage: dataStoreData?.transfer?.programStage,
                     destinySchoolDataElement: dataStoreData?.transfer?.destinySchool,
                 }
             })
-    }, [sectionType, filterState, pagination.page, pagination?.pageSize, refetch, grade, section, school, academicYear])
+    }, [sectionType, filterState, pagination.page, pagination?.pageSize, refetch, grade, section, school, academicYear, sort])
 
     return (
         <div style={{ height: "85vh" }}>
@@ -144,6 +146,10 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
                             loading={loading}
                             rightElements={<EnrollmentActionsButtons i18n={i18n} baseUrl={baseUrl} />}
                             setFilterState={setFilterState}
+                            sortable
+                            order={order}
+                            orderBy={orderBy}
+                            createSortHandler={createSortHandler}
                         />
                         {openDeleteModal && <ModalManagerEnrollmentDelete i18n={i18n} open={openDeleteModal} setOpen={setOpenDeleteModal} saveMode="UPDATE" />}
                         {openEditModal && <ModalManager i18n={i18n} formVariablesFields={formData} formFields={enrollmentFormFields} open={openEditModal} setOpen={setOpenEditModal} saveMode="UPDATE" />}

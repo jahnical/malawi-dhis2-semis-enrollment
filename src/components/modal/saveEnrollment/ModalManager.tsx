@@ -23,6 +23,7 @@ function ModalManager(props: ModalManagerInterface) {
     const trackedEntity = useQuery.get("trackedEntity") as string
     const { program: programData, dataStoreData } = useGetSelectedKeys()
     const schoolCalendar = useSchoolCalendarKey();
+    const enrollmentAcademicYearField = dataStoreData.registration.academicYear || schoolCalendar?.academicYear;
     const validateYear = useEnrollmentYearValidation();
     const { show } = useShowAlerts();
     const [validating, setValidating] = useState(false);
@@ -85,8 +86,8 @@ function ModalManager(props: ModalManagerInterface) {
         try {
             await validateYear({
                 students: [{ trackedEntity: saveMode === 'UPDATE' ? trackedEntity : initialValuesFromSearch?.trackedEntity, values: e }],
-                enrollmentYear: e[dataStoreData.registration.academicYear],
-                dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, sectionType: sectionName,
+                enrollmentYear: e[enrollmentAcademicYearField],
+                dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, academicYearField: enrollmentAcademicYearField, sectionType: sectionName,
             });
         } catch (error: any) {
             show({ message: i18n.t(error.message), type: { critical: true } });
@@ -155,7 +156,7 @@ function ModalManager(props: ModalManagerInterface) {
                 onChange={handleChange}
                 setFormValues={setValues}
                 onCancel={handleCloseModal}
-                formFields={validateYear.withFieldError(updatedVariables, dataStoreData.registration.academicYear, values[dataStoreData.registration.academicYear], message => i18n.t(message))}
+                formFields={validateYear.withFieldError(updatedVariables, enrollmentAcademicYearField, values[enrollmentAcademicYearField], message => i18n.t(message))}
                 trackedEntity={trackedEntity}
                 initialValues={{
                     ...allInitialValues,

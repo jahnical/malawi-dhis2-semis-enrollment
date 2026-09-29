@@ -6,7 +6,7 @@ import ModalManager from "../../components/modal/saveEnrollment/ModalManager";
 import { TableDataRefetch, Modules, ProgramConfig, D2I18n, VariablesTypes, CustomAttributeProps } from "dhis2-semis-types"
 import useGetSelectedProgram from '../../hooks/config/useGetSelectedKeys';
 import ModalManagerEnrollmentDelete from '../../components/modal/deleteEnrollment/ModalManager';
-import { useBuildForm, useCheckFilters, useHeader, useTableData, useTableSort, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
+import { getInfoInstructions, useBuildForm, useCheckFilters, useHeader, useTableData, useTableSort, useUrlParams, useViewPortWidth } from "dhis2-semis-functions";
 import EnrollmentActionsButtons from "../../components/enrollmentButtons/EnrollmentActionsButtons";
 import { formFields } from '../../utils/constants/form/enrollmentForm';
 
@@ -121,10 +121,7 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
                         sections={[
                             {
                                 sectionTitle: `${i18n.t("Follow the instructions to proceed")}:`,
-                                instructions: [
-                                    `${i18n.t("Select the Organization unit you want to view data")}`,
-                                    `${i18n.t("Use global filters(Class, Grade and Academic Year)")}`
-                                ]
+                                instructions: getInfoInstructions({ i18n, filters: (dataStoreData?.filters?.dataElements ?? []) as any, program: program as any, academicYear: "required", sectionFilters: "optional" })
                             }
                         ]}
                     />

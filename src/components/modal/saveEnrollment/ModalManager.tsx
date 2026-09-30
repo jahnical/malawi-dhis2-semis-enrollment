@@ -1,4 +1,6 @@
 import { format } from "date-fns";
+import { useEnrollmentYearValidation, useShowAlerts } from 'dhis2-semis-functions';
+import { useSchoolCalendarKey } from 'dhis2-semis-components';
 import { useRecoilState } from "recoil";
 import ModalContent from "./ModalContent";
 import React, { useEffect, useState } from "react";
@@ -20,6 +22,11 @@ function ModalManager(props: ModalManagerInterface) {
     const [refetch, setRefetch] = useRecoilState(TableDataRefetch);
     const trackedEntity = useQuery.get("trackedEntity") as string
     const { program: programData, dataStoreData } = useGetSelectedKeys()
+    const schoolCalendar = useSchoolCalendarKey();
+    const enrollmentAcademicYearField = dataStoreData.registration.academicYear || schoolCalendar?.academicYear;
+    const validateYear = useEnrollmentYearValidation();
+    const { show } = useShowAlerts();
+    const [validating, setValidating] = useState(false);
     const { attributes = [] } = useGetAttributes({ programData: programData! });
     const programStagesToSave = useGetUsedProgramStages({ sectionType: sectionName });
     const { errorLoading, returnPattern, loadingCodes, generatedVariables } = useGetPatternCode();
@@ -75,7 +82,20 @@ function ModalManager(props: ModalManagerInterface) {
     };
 
 
-    function onSubmit(e: Record<string, any>): void {
+    async function onSubmit(e: Record<string, any>) {
+        setValidating(true);
+        try {
+            await validateYear({
+                students: [{ trackedEntity: saveMode === 'UPDATE' ? trackedEntity : initialValuesFromSearch?.trackedEntity, values: e }],
+                enrollmentYear: e[enrollmentAcademicYearField],
+                dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, academicYearField: enrollmentAcademicYearField, sectionType: sectionName,
+            });
+        } catch (error: any) {
+            show({ message: i18n.t(error.message), type: { critical: true } });
+            return;
+        } finally {
+            setValidating(false);
+        }
         const data = () => {
             if (saveMode === "CREATE") {
                 return enrollmentPostBody({
@@ -132,13 +152,13 @@ function ModalManager(props: ModalManagerInterface) {
             })}
         >
             <ModalContent
-                loading={saving!}
+                loading={saving || validating}
                 onSubmit={onSubmit}
                 formValues={values}
                 onChange={handleChange}
                 setFormValues={setValues}
                 onCancel={handleCloseModal}
-                formFields={updatedVariables}
+                formFields={validateYear.withFieldError(updatedVariables, enrollmentAcademicYearField, values[enrollmentAcademicYearField], message => i18n.t(message))}
                 trackedEntity={trackedEntity}
                 initialValues={{
                     ...allInitialValues,

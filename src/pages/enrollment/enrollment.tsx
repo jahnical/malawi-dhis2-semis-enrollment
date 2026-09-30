@@ -1,5 +1,5 @@
 import { useRecoilValue } from 'recoil';
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { IconDelete24, IconEdit24, Tag } from "@dhis2/ui";
 import { Table, InfoPage, useSchoolCalendarKey } from "dhis2-semis-components";
 import ModalManager from "../../components/modal/saveEnrollment/ModalManager";
@@ -15,7 +15,7 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
     const { urlParameters, add, remove } = useUrlParams()
     const { program, dataStoreData } = useGetSelectedProgram()
     const schoolCalendar = useSchoolCalendarKey()
-    const { academicYear, grade, class: section, school, schoolName, sectionType } = urlParameters
+    const { academicYear, school, schoolName, sectionType } = urlParameters
     const [openEditModal, setOpenEditModal] = useState<boolean>(false)
     const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false)
     const { getData, tableData, loading, sortableKeys } = useTableData({ module: Modules.Enrollment });
@@ -27,6 +27,20 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
     const { formData } = useBuildForm({ dataStoreData, programData: program, module: Modules.Enrollment, schoolCalendar });
     const enrollmentFormFields = formFields({ formFieldsData: formData, sectionName: sectionType! })
     const { getFilters } = useCheckFilters({ filters: (dataStoreData?.filters?.dataElements ?? []) as unknown as any })
+    // Track actual filter values, including dynamically configured staff filters.
+    const registryQuery = JSON.stringify({
+        program: program?.id,
+        orgUnit: school,
+        baseProgramStage: dataStoreData?.registration?.programStage,
+        attributeFilters: filterState.attributes.flat(),
+        dataElementFilters: [
+            academicYear && schoolCalendar?.academicYear ? `${schoolCalendar.academicYear}:in:${academicYear}` : null,
+            ...getFilters().flat(),
+            ...filterState.dataElements.flat(),
+        ].filter((filter): filter is string => Boolean(filter)),
+        order: dataStoreData.defaults.defaultOrder,
+    });
+    const previousRegistryQuery = useRef(registryQuery);
 
     const enrollmentColumns = useMemo(() => {
         if (!columns) return columns;
@@ -91,26 +105,23 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
     ];
 
     useEffect(() => {
-        if (school && academicYear)
+        if (previousRegistryQuery.current !== registryQuery && pagination.page !== 1) {
+            setPagination((prev: any) => ({ ...prev, page: 1 }));
+            return;
+        }
+        previousRegistryQuery.current = registryQuery;
+        if (school && academicYear && program?.id)
             void getData({
+                ...JSON.parse(registryQuery),
                 page: pagination?.page,
                 pageSize: pagination?.pageSize,
-                program: program?.id as string,
-                orgUnit: school!,
-                baseProgramStage: dataStoreData?.registration?.programStage as string,
-                attributeFilters: filterState.attributes,
-                dataElementFilters: [
-                    academicYear !== null ? `${schoolCalendar?.academicYear}:in:${academicYear}` : null,
-                    ...getFilters() as unknown as any
-                ].filter((filter): filter is string => filter !== null),
-                order: dataStoreData.defaults.defaultOrder,
                 sort: sort && { ...sort, program: program! },
                 transferConfig: {
                     transferProgramStage: dataStoreData?.transfer?.programStage,
                     destinySchoolDataElement: dataStoreData?.transfer?.destinySchool,
                 }
             })
-    }, [sectionType, filterState, pagination.page, pagination?.pageSize, refetch, grade, section, school, academicYear, sort])
+    }, [sectionType, registryQuery, pagination.page, pagination?.pageSize, refetch, school, academicYear, sort])
 
     return (
         <div style={{ height: "85vh" }}>

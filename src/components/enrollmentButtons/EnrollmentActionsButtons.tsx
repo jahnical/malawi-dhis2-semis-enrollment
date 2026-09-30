@@ -26,11 +26,8 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
     const [openEnrollSingleModal, setOpenEnrollSingleModal] = useState<boolean>(false);
     const [enrollStudentData, setEnrollStudentData] = useState<{
         trackedEntityId: string;
-        enrollmentId?: string;
-        activeEnrollmentToComplete?: string;
-        activeEnrollmentEnrolledAt?: string;
         initialValues: Record<string, any>;
-    }>({ trackedEntityId: "", enrollmentId: undefined, activeEnrollmentToComplete: undefined, activeEnrollmentEnrolledAt: undefined, initialValues: {} });
+    }>({ trackedEntityId: "", initialValues: {} });
     const { formData } = useBuildForm({ dataStoreData, programData, module: Modules.Enrollment, schoolCalendar });
     const { hide, show } = useShowAlerts()
     const { areAllSelected, getFilters } = useCheckFilters({ filters: (dataStoreData.filters.dataElements ?? []) as unknown as any })
@@ -46,16 +43,10 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
 
     const onSelectTeiForEnrollment = (payload: {
         trackedEntityId: string;
-        enrollmentId?: string;
-        activeEnrollmentToComplete?: string;
-        activeEnrollmentEnrolledAt?: string;
         initialValues?: Record<string, any>;
     }) => {
         setEnrollStudentData({
             trackedEntityId: payload.trackedEntityId,
-            enrollmentId: payload.enrollmentId,
-            activeEnrollmentToComplete: payload.activeEnrollmentToComplete,
-            activeEnrollmentEnrolledAt: payload.activeEnrollmentEnrolledAt,
             initialValues: payload.initialValues ?? {},
         });
         setOpenEnrollSingleModal(true);
@@ -194,9 +185,6 @@ function EnrollmentActionsButtons({ i18n, baseUrl }: { i18n: D2I18n, baseUrl: st
                     open={openEnrollSingleModal}
                     setOpen={setOpenEnrollSingleModal}
                     trackedEntityId={enrollStudentData.trackedEntityId}
-                    enrollmentId={enrollStudentData.enrollmentId}
-                    activeEnrollmentToComplete={enrollStudentData.activeEnrollmentToComplete || undefined}
-                    activeEnrollmentEnrolledAt={enrollStudentData.activeEnrollmentEnrolledAt || undefined}
                     defaultAcademicYear={(schoolCalendar as any)?.defaults?.academicYear ?? academicYear ?? undefined}
                     academicYearDataElement={dataStoreData?.registration?.academicYear}
                     initialValues={enrollStudentData.initialValues}

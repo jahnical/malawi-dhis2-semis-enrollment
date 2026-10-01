@@ -1,3 +1,4 @@
+import { enrollmentsForTransition, type TransitionPlan } from "dhis2-semis-functions";
 import { reducer } from "../common/formatDistinctValue";
 
 interface enrollmentPostBodyInterface {
@@ -9,9 +10,13 @@ interface enrollmentPostBodyInterface {
     formVariablesFields: any[],
     values: Record<string, any>,
     programStagesToSave: (string | undefined)[],
+    // From planEnrollmentTransition: earlier ACTIVE enrollments to complete and the status of this one
+    plan: TransitionPlan,
+    // From enrollmentDates: enrolledAt is the date entered, occurredAt the academic year start
+    dates: { enrolledAt?: string, occurredAt?: string },
 }
 
-export const enrollmentPostBody = ({ formVariablesFields, programId, orgUnitId, enrollmentDate, programStagesToSave, trackedEntityType, trackedEntityId, values }: enrollmentPostBodyInterface) => {
+export const enrollmentPostBody = ({ formVariablesFields, programId, orgUnitId, enrollmentDate, programStagesToSave, trackedEntityType, trackedEntityId, values, plan, dates }: enrollmentPostBodyInterface) => {
     const form: { attributes: any[], events: any[] } = {
         attributes: [],
         events: []
@@ -55,17 +60,18 @@ export const enrollmentPostBody = ({ formVariablesFields, programId, orgUnitId, 
     return {
         trackedEntities: [
             {
-                enrollments: [
-                    {
+                enrollments: enrollmentsForTransition({
+                    plan,
+                    trackedEntity: trackedEntityId,
+                    program: programId,
+                    enrollment: {
                         orgUnit: orgUnitId,
-                        program: programId,
-                        status: "COMPLETED",
                         events: form?.events?.filter(event => event.programStage !== undefined),
                         attributes: form.attributes,
-                        occurredAt: enrollmentDate,
-                        enrolledAt: enrollmentDate,
-                    }
-                ],
+                        occurredAt: dates.occurredAt ?? enrollmentDate,
+                        enrolledAt: dates.enrolledAt ?? enrollmentDate,
+                    },
+                }),
                 orgUnit: orgUnitId,
                 trackedEntityType,
                 ...(trackedEntityId ? { trackedEntity: trackedEntityId } : {})

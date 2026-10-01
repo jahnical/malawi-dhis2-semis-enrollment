@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { useEnrollmentYearValidation, useShowAlerts } from 'dhis2-semis-functions';
+import { useEnrollmentYearValidation, useShowAlerts, useGetLearnerEnrollments, enrollmentDates, getAcademicYearDates, getAcademicYearOptions, TRANSITION_CONFLICT_MESSAGES, type TransitionPlan } from 'dhis2-semis-functions';
 import { useSchoolCalendarKey } from 'dhis2-semis-components';
 import { useRecoilState } from "recoil";
 import ModalContent from "./ModalContent";
@@ -32,7 +32,8 @@ function ModalManager(props: ModalManagerInterface) {
     const { errorLoading, returnPattern, loadingCodes, generatedVariables } = useGetPatternCode();
     const { open, setOpen, saveMode, initialValues: initialValuesFromSearch, formFields = [], formVariablesFields, setFormInitialValues, i18n } = props;
     const sectionLabels = getSectionLabels(sectionName, i18n);
-    const { getInitialValues, initialValues: updateInitialValues, loading: initialValuesLoading, enrollmentEvents } = useGetEnrollmentUpdateInitialValues()
+    const { getInitialValues, initialValues: updateInitialValues, loading: initialValuesLoading, enrollmentEvents, existingEnrollment } = useGetEnrollmentUpdateInitialValues()
+    const { planEnrollments } = useGetLearnerEnrollments()
 
     let allInitialValues = {
         orgUnit: school,
@@ -83,19 +84,56 @@ function ModalManager(props: ModalManagerInterface) {
 
 
     async function onSubmit(e: Record<string, any>) {
+        const calendars = schoolCalendar?.schoolCalendar ?? [];
+        const options = getAcademicYearOptions(programData, enrollmentAcademicYearField);
+        const academicYear = e[enrollmentAcademicYearField];
+        const newTrackedEntity: string | undefined = initialValuesFromSearch?.trackedEntity;
         setValidating(true);
+        let plan: TransitionPlan | undefined;
         try {
             await validateYear({
-                students: [{ trackedEntity: saveMode === 'UPDATE' ? trackedEntity : initialValuesFromSearch?.trackedEntity, values: e }],
-                enrollmentYear: e[enrollmentAcademicYearField],
+                students: [{ trackedEntity: saveMode === 'UPDATE' ? trackedEntity : newTrackedEntity, values: e }],
+                enrollmentYear: academicYear,
                 dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, academicYearField: enrollmentAcademicYearField, sectionType: sectionName,
             });
+            if (saveMode === "CREATE") {
+                // One enrollment per academic year: close an earlier ACTIVE one, or stop on a conflict
+                try {
+                    const { plans } = await planEnrollments({
+                        trackedEntities: [newTrackedEntity],
+                        program: programData?.id!,
+                        targetAcademicYear: academicYear,
+                        currentAcademicYear: schoolCalendar?.defaults?.academicYear ?? academicYear,
+                        registrationStage: dataStoreData?.registration?.programStage,
+                        academicYearDataElement: enrollmentAcademicYearField,
+                        years: { calendars, options },
+                    });
+                    plan = plans.get(newTrackedEntity ?? "");
+                } catch {
+                    throw new Error("Could not check existing enrollments. Please try again.");
+                }
+            }
         } catch (error: any) {
             show({ message: i18n.t(error.message), type: { critical: true } });
             return;
         } finally {
             setValidating(false);
         }
+        if (plan?.conflict) {
+            show({ message: i18n.t(TRANSITION_CONFLICT_MESSAGES[plan.conflict]), type: { critical: true } });
+            return;
+        }
+        if (saveMode === "UPDATE" && !existingEnrollment) {
+            show({ message: i18n.t("Could not load the enrollment. Please close and try again."), type: { critical: true } });
+            return;
+        }
+
+        const { calendarFound, ...dates } = enrollmentDates({ calendar: calendars, academicYear, enrollmentDate: e?.enrollment_date, options });
+        const academicYearChanged = saveMode === "UPDATE" && String(academicYear ?? "") !== String(updateInitialValues?.[enrollmentAcademicYearField] ?? "");
+        if ((saveMode === "CREATE" || academicYearChanged) && !calendarFound) {
+            show({ message: i18n.t("The academic year is not in the school calendar. The enrollment date is used as its start date."), type: { warning: true } });
+        }
+
         const data = () => {
             if (saveMode === "CREATE") {
                 return enrollmentPostBody({
@@ -106,7 +144,9 @@ function ModalManager(props: ModalManagerInterface) {
                     formVariablesFields: formVariablesFields,
                     enrollmentDate: e?.enrollment_date,
                     trackedEntityType: programData?.trackedEntityType?.id!,
-                    trackedEntityId: initialValuesFromSearch!["trackedEntity"]
+                    trackedEntityId: newTrackedEntity,
+                    plan: plan!,
+                    dates,
                 });
             }
 
@@ -121,6 +161,10 @@ function ModalManager(props: ModalManagerInterface) {
                     programId: programData?.id!,
                     formValues: e,
                     events: enrollmentEvents?.events,
+                    existingEnrollment,
+                    enrollmentDateChanged: Boolean(e?.enrollment_date) && e?.enrollment_date !== updateInitialValues?.enrollment_date,
+                    academicYearStart: academicYearChanged ? getAcademicYearDates(calendars, academicYear, options)?.startDate : undefined,
+                    registrationStage: dataStoreData?.registration?.programStage,
                 });
             }
         };

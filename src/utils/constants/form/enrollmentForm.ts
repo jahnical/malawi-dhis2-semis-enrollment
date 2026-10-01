@@ -63,8 +63,8 @@ function formFields({ formFieldsData, sectionName }: { formFieldsData: any[], se
       ]
     },
     {
-      name: `${capitalizeString(sectionName)} Profile`,
-      description: `${capitalizeString(sectionName)} personal details`,
+      name: `${capitalizeString(sectionName === 'student' ? 'learner' : sectionName)} Profile`,
+      description: `${capitalizeString(sectionName === 'student' ? 'learner' : sectionName)} personal details`,
       visible: true,
       fields: [
         ...studentsProfile
@@ -72,7 +72,7 @@ function formFields({ formFieldsData, sectionName }: { formFieldsData: any[], se
     },
     {
       name: "Socio-economic Details",
-      description: `Details about the ${sectionName} socio-economic status`,
+      description: `Details about the ${sectionName === 'student' ? 'learner' : sectionName} socio-economic status`,
       visible: Boolean(socioEconomicDetails.length),
       fields: [
         ...socioEconomicDetails

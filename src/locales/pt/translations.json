@@ -25,5 +25,7 @@
     "Staff": "Funcionário",
     "Student": "Estudante",
     "student": "estudante",
-    "staff": "funcionário"
+    "staff": "funcionário",
+    "Learner": "Estudante",
+    "learner": "estudante"
 }

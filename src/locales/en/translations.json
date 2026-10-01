@@ -22,5 +22,7 @@
     "Follow the instructions to proceed": "Follow the instructions to proceed",
     "Select the Organization unit you want to view data": "Select the Organization unit you want to view data",
     "Use global filters(Class, Grade and Academic Year)": "Use global filters(Class, Grade and Academic Year)",
-    "Enrollments": "Enrollments"
+    "Enrollments": "Enrollments",
+    "SEMIS-Staff-Enrollment": "SEMIS-Staff-Enrollment",
+    "SEMIS-Learner-Enrollment": "SEMIS-Learner-Enrollment"
 }

@@ -96,6 +96,12 @@ function ModalManager(props: ModalManagerInterface) {
                 enrollmentYear: academicYear,
                 dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, academicYearField: enrollmentAcademicYearField, sectionType: sectionName,
             });
+        } catch {
+            // The validation hook displays the error beside the Academic Year field.
+            setValidating(false);
+            return;
+        }
+        try {
             if (saveMode === "CREATE") {
                 // One enrollment per academic year: close an earlier ACTIVE one, or stop on a conflict
                 try {
@@ -114,6 +120,7 @@ function ModalManager(props: ModalManagerInterface) {
                 }
             }
         } catch (error: any) {
+            // Not a field problem (e.g. the enrollment check failed), so show it as an alert
             show({ message: i18n.t(error.message), type: { critical: true } });
             return;
         } finally {

@@ -128,7 +128,7 @@ export default function EnrollmentsPage({ i18n, baseUrl }: { i18n: D2I18n, baseU
             {
                 !(Boolean(schoolName) && Boolean(school)) ?
                     <InfoPage
-                        title={i18n.t("SEMIS-Enrollment")}
+                        title={sectionType === "staff" ? i18n.t("SEMIS-Staff-Enrollment") : i18n.t("SEMIS-Learner-Enrollment")}
                         sections={[
                             {
                                 sectionTitle: `${i18n.t("Follow the instructions to proceed")}:`,

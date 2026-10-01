@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { useEnrollmentYearValidation, useShowAlerts } from 'dhis2-semis-functions';
+import { useEnrollmentYearValidation } from 'dhis2-semis-functions';
 import { useSchoolCalendarKey } from 'dhis2-semis-components';
 import { useRecoilState } from "recoil";
 import ModalContent from "./ModalContent";
@@ -25,7 +25,6 @@ function ModalManager(props: ModalManagerInterface) {
     const schoolCalendar = useSchoolCalendarKey();
     const enrollmentAcademicYearField = dataStoreData.registration.academicYear || schoolCalendar?.academicYear;
     const validateYear = useEnrollmentYearValidation();
-    const { show } = useShowAlerts();
     const [validating, setValidating] = useState(false);
     const { attributes = [] } = useGetAttributes({ programData: programData! });
     const programStagesToSave = useGetUsedProgramStages({ sectionType: sectionName });
@@ -90,8 +89,8 @@ function ModalManager(props: ModalManagerInterface) {
                 enrollmentYear: e[enrollmentAcademicYearField],
                 dataStore: dataStoreData, calendars: schoolCalendar?.schoolCalendar, programConfig: programData, academicYearField: enrollmentAcademicYearField, sectionType: sectionName,
             });
-        } catch (error: any) {
-            show({ message: i18n.t(error.message), type: { critical: true } });
+        } catch {
+            // The validation hook displays the error beside the Academic Year field.
             return;
         } finally {
             setValidating(false);
